@@ -15,14 +15,12 @@ export default function Header() {
     useEffect(() => {
         if (session?.error === "RefreshAccessTokenError") {
             signOut({
-                callbackUrl:`${window.location.origin}/login?callbackUrl=${window.location.href}`
+                callbackUrl: `${window.location.origin}/login?callbackUrl=${window.location.href}`
             });
         }
     }, [session]);
 
-    // When rendering client side don't display anything until loading is complete
-    // if (typeof window !== 'undefined' && loading) return <header>loading...</header>;
-    if (loading || session?.error) return <header>loading...</header>;
+    if (typeof window === 'undefined' || loading || session?.error) return <header>loading...</header>;
 
     return (
         <header>

@@ -11,7 +11,7 @@ export default function Page() {
 
     useEffect(() => {
         if (router.query.error) {
-            setLoginError(router.query.error)
+            setLoginError(router.query.error);
             setMail(router.query.email);
         }
     }, [router]);
@@ -31,6 +31,18 @@ export default function Page() {
         );
     }
 
+    const handleGoogleLogin = (e) => {
+        const callbackUrl = router.query.callbackUrl === undefined ? window.location.origin : router.query.callbackUrl;
+
+        e.preventDefault();
+
+        signIn('google',
+            {
+                callbackUrl: callbackUrl
+            }
+        );
+    }
+
     return (
         <div>
             <span>{loginError}</span>
@@ -39,6 +51,8 @@ export default function Page() {
                 <input type="email" value={mail || ''} onChange={(e) => setMail(e.target.value)} />
                 <input type="password" value={password || ''} onChange={(e) => setPassword(e.target.value)} />
                 <button type='submit' disabled={isLoginStarted || false}>login</button>
+                <br /><br /><br />
+                <button type='submit' onClick={(e) => handleGoogleLogin(e)}>google</button>
             </form>
         </div>
     );

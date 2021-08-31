@@ -2,22 +2,60 @@ import NextAuth from "next-auth";
 import Providers from "next-auth/providers";
 
 async function refreshAccessToken(token) {
-  try {
-    // Api'ye git
-
-    return {
-      ...token,
-      accessToken: "elma" + (Math.random() * 100),
-      refreshToken: "armut" + (Math.random() * 100),
-      accessTokenExpires: Math.now() + 5 * 1000,
-      refresh: true
+  if (token.provider === 'credentials') {
+    try {
+      return {
+        ...token,
+        accessToken: "apple-" + (Math.random() * 100),
+        refreshToken: "pear-" + (Math.random() * 100),
+        accessTokenExpires: Date.now() + 60 * 60 * 1000,
+        refresh: true
+      }
+    }
+    catch (error) {
+      return {
+        ...token,
+        error: "RefreshAccessTokenError"
+      };
     }
   }
-  catch (error) {
-    return {
-      ...token,
-      error: "RefreshAccessTokenError",
-    };
+
+  if (token.provider === 'google') {
+    try {
+      const url =
+        "https://oauth2.googleapis.com/token?" +
+        new URLSearchParams({
+          client_id: process.env.GOOGLE_ID,
+          client_secret: process.env.GOOGLE_SECRET,
+          grant_type: "refresh_token",
+          refresh_token: token.refreshToken,
+        });
+
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method: "POST"
+      });
+
+      const refreshedTokens = await response.json();
+
+      if (!response.ok) {
+        throw refreshedTokens;
+      }
+
+      return {
+        ...token,
+        accessToken: refreshedTokens.access_token,
+        accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
+        refreshToken: refreshedTokens.refresh_token ?? token.refreshToken, // Fall back to old refresh token
+      };
+    } catch (error) {
+      return {
+        ...token,
+        error: "RefreshAccessTokenError"
+      };
+    }
   }
 }
 
@@ -30,28 +68,30 @@ export default NextAuth({
         password: { label: "Password", type: "password" }
       },
       authorize: async (credentials) => {
-        // api'ye git
-
         const user = {
-          name: "Muharrem",
-          email: "muharrem.aras@trtworld.com",
-          accessToken: "elma",
-          refreshToken: "armut",
+          name: "John Doe",
+          email: "john@doe.com",
+          accessToken: "apple",
+          refreshToken: "pear",
           image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Gentile_Bellini_003.jpg/800px-Gentile_Bellini_003.jpg",
           customField: "custom added field",
-          accessTokenExpires: Date.now() + 5 * 1000
+          accessTokenExpires: Date.now() + 60 * 60 * 1000
         };
 
         return Promise.resolve(user);
       }
     }),
+    Providers.Google({
+      clientId: process.env.GOOGLE_ID,
+      clientSecret: process.env.GOOGLE_SECRET,
+      authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&response_type=code'
+    })
   ],
 
   // The secret should be set to a reasonably long random string.
   // It is used to sign cookies and to sign and encrypt JSON Web Tokens, unless
   // a separate secret is defined explicitly for encrypting the JWT.
   secret: process.env.SECRET,
-
   session: {
     jwt: true,
     maxAge: 1 * 1 * 60 * 60
@@ -62,13 +102,12 @@ export default NextAuth({
   // https://next-auth.js.org/configuration/options#jwt
   jwt: {
     secret: process.env.SECRET,
-    encryption: true,
+    encryption: true
     // You can define your own encode/decode functions for signing and encryption
     // if you want to override the default behaviour.
     // encode: async ({ secret, token, maxAge }) => {},
     // decode: async ({ secret, token, maxAge }) => {},
   },
-
   pages: {
     signIn: '/login',
     signOut: '/logout',
@@ -79,9 +118,20 @@ export default NextAuth({
   callbacks: {
     async jwt(token, user, account) {
       if (user && account) {
-        token.accessToken = user.accessToken;
-        token.refreshToken = user.refreshToken;
-        token.accessTokenExpires = user.accessTokenExpires;
+        if (account.id === 'credentials') {
+          token.accessToken = user.accessToken;
+          token.refreshToken = user.refreshToken;
+          token.accessTokenExpires = user.accessTokenExpires;
+          token.provider = account.id;
+        }
+
+        if (account.provider === 'google') {
+          token.accessToken = account.access_token;
+          token.refreshToken = account.refresh_token;
+          token.accessTokenExpires = Date.now() + user.expires_in * 1000;
+          token.provider = account.provider;
+        }
+
         token.refresh = false;
         token.user = user;
 
@@ -97,6 +147,7 @@ export default NextAuth({
     async session(session, token) {
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
+      session.provider = token.provider;
       session.accessTokenExpires = token.accessTokenExpires;
       session.error = token.error;
 
