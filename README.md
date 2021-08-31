@@ -1,1 +1,7 @@
-This is a starter template for [Learn Next.js](https://nextjs.org/learn).
+Next Auth Example With Custom Login Page
+
+In this small project you can find the following items.
+
+- credential login (custom login page)
+- google login
+- refresh token

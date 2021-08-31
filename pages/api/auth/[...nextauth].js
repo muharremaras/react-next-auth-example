@@ -3,6 +3,7 @@ import Providers from "next-auth/providers";
 
 async function refreshAccessToken(token) {
   if (token.provider === 'credentials') {
+    // GO REFRESH TOKEN API
     try {
       return {
         ...token,
@@ -68,6 +69,8 @@ export default NextAuth({
         password: { label: "Password", type: "password" }
       },
       authorize: async (credentials) => {
+        // GO LOGIN API with credentials
+
         const user = {
           name: "John Doe",
           email: "john@doe.com",
