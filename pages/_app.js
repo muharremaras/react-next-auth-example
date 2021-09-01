@@ -7,7 +7,7 @@ export default function App({ Component, pageProps }) {
                 clientMaxAge: 1 * 1 * 30 * 60,
                 keepAlive: 1 * 1 * 5 * 60
             }}
-            session={pageProps.session} >
+            session={pageProps.session}>
             <Component {...pageProps} />
         </Provider>
     );
